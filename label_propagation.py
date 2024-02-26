@@ -133,7 +133,7 @@ class LGC(Base):
 
     def _build_propagation_matrix(self):
         """ LGC computes the normalized Laplacian as its propagation matrix"""
-        degrees = self.graph.sum(axis=0).A[0]
+        degrees = np.asarray(self.graph.sum(axis=0))
         degrees[degrees==0] += 1  # Avoid division by 0
         D2 = np.sqrt(sparse.diags((1.0/degrees),offsets=0))
         S = D2.dot(self.graph).dot(D2)
@@ -169,7 +169,7 @@ class HMN(Base):
         super(HMN, self).__init__(graph,max_iter=30)
 
     def _build_propagation_matrix(self):
-        degrees = self.graph.sum(axis=0).A[0]
+        degrees = np.asarray(self.graph.sum(axis=0))
         degrees[degrees==0] += 1  # Avoid division by 0
         D = sparse.diags((1.0/degrees),offsets=0)
         P = D.dot(self.graph).tolil()
@@ -204,12 +204,12 @@ class PARW(Base):
     Learning with partially absorbing random walks.
     In Advances in Neural Information Processing Systems (pp. 3077-3085).
     """
-    def __init__(self,graph=None,lamb=1.0,max_iter=30):
+    def __init__(self, graph=None, lamb=1.0, max_iter=30):
         super(PARW, self).__init__(graph,max_iter=30)
         self.lamb=lamb
 
     def _build_propagation_matrix(self):
-        d = self.graph.sum(axis=1).T.A[0]
+        d = np.asarray(self.graph.sum(axis=1).T)
         Z = sparse.diags(1.0 / (d+self.lamb), offsets=0)
         P = Z.dot(self.graph)
         return P
@@ -219,9 +219,9 @@ class PARW(Base):
         n_classes = self.y_.max()+1
         B = np.zeros((n_samples,n_classes))
         B[self.x_,self.y_] = 1
-        d = np.array(self.graph.sum(1).T)[0]
+        d = np.array(self.graph.sum(axis=1).T)
         Z = sparse.diags(1.0 / (d+self.lamb), offsets=0)
-        Lamb = sparse.diags(self.lamb,shape=(n_samples,n_samples), offsets=0)
+        Lamb = sparse.diags(self.lamb * np.ones(n_samples), offsets=0)
         return Z.dot(Lamb).dot(B)
 
 class OMNI(Base):
@@ -251,8 +251,8 @@ class OMNI(Base):
         self.lamb = lamb
 
     def _build_propagation_matrix(self):
-        d = self.graph.sum(axis=0).A[0]
-        dT = self.graph.sum(axis=1).T.A[0]
+        d = np.asarray(self.graph.sum(axis=0))
+        dT = np.asarray(self.graph.sum(axis=1).T)
         Q = (sparse.diags(1.0/(d+self.lamb), offsets=0).dot(self.graph)).dot(sparse.diags(1.0/(dT+self.lamb),offsets=0).dot(self.graph.T)).tolil()
         Q[self.x_] = 0
         return Q
@@ -262,8 +262,8 @@ class OMNI(Base):
         n_classes = self.y_.max()+1
         unlabeled = np.setdiff1d(np.arange(n_samples),self.x_)
 
-        dU = self.graph[unlabeled].sum(axis=1).T.A[0]
-        dT = self.graph.sum(axis=0).A[0]
+        dU = np.asarray(self.graph[unlabeled].sum(axis=1).T)
+        dT = np.asarray(self.graph.sum(axis=0))
         n_samples = self.graph.shape[0]
         r = sparse.diags(1.0/(dU+self.lamb),offsets=0).dot(self.lamb*self.graph[unlabeled].dot(sparse.diags(1.0/(dT+self.lamb),offsets=0)).dot(np.ones(n_samples))+self.lamb)
 
@@ -314,7 +314,7 @@ class CAMLP(Base):
         return self.P_.dot(self.F_).dot(self.H) + self.B_
 
     def _build_normalization_term(self):
-        d = self.graph.sum(axis=1).T.A[0]
+        d = np.asarray(self.graph.sum(axis=1).T)
         return sparse.diags(1.0/(1.0+d*self.beta),offsets=0)
 
     def _build_propagation_matrix(self):
